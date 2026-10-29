@@ -25,6 +25,14 @@ header{display:flex;justify-content:space-between;align-items:center;padding:12p
 .nl.pill{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--panel);color:var(--text);padding:4px 14px 4px 5px}
 main{flex:1;width:100%;max-width:1240px;margin:0 auto;padding:26px 20px 60px;display:flex;justify-content:center}
 .card{width:100%;max-width:420px;align-self:center;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:32px;box-shadow:0 12px 32px rgba(0,0,0,.35)}
+#authCard{display:none}
+.site-footer{width:100%;padding:16px clamp(16px,4vw,48px);border-top:1px solid rgba(74,83,94,.4);color:var(--mute);font-size:12px}
+.cookie-notice{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 16px;margin-bottom:12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;color:var(--text);font-size:13px;line-height:1.5}
+.cookie-notice[hidden]{display:none}
+.cookie-notice p{max-width:850px}
+.cookie-notice .btn{flex:none}
+.copyright{text-align:center}
+@media(max-width:600px){.cookie-notice{align-items:flex-start;flex-direction:column}.cookie-notice .btn{align-self:flex-end}}
 h1{font:800 28px var(--display);margin-bottom:8px;letter-spacing:-.02em}
 h2{font:800 20px var(--display)}
 .sub{color:var(--mute);font-size:14px;margin-bottom:20px;line-height:1.5}
@@ -119,6 +127,7 @@ input:focus,textarea:focus{border-color:var(--accent)}
 </header>
 <aside class="beta-notice" role="note">Beta testing: This site is still in beta. More coding lessons and fixes are coming.</aside>
 <main>
+  <div class="card" id="authLoading" role="status" aria-live="polite">Checking your sign-in…</div>
   <div class="card" id="authCard">
     <div id="stepAuth" class="step active">
       <h1 id="cardTitle">Create Account</h1>
@@ -184,6 +193,14 @@ input:focus,textarea:focus{border-color:var(--accent)}
   </section>
 </main>
 
+<footer class="site-footer">
+  <aside class="cookie-notice" id="cookieNotice" role="note" aria-label="Cookies and browser storage">
+    <p><strong>Cookies &amp; browser storage:</strong> This site uses essential browser storage to keep you signed in and save your coding progress and profile preferences. It does not use advertising trackers.</p>
+    <button class="btn ghost sm" id="dismissCookieNotice" type="button">Got it</button>
+  </aside>
+  <p class="copyright">© <span id="copyrightYear"></span> Codey. All rights reserved.</p>
+</footer>
+
 <div class="modal-scrim" id="modal"><div class="modal"><h2 style="margin-bottom:6px">Edit Profile</h2><p class="sub">Update your avatar and bio.</p>
   <form id="profileForm"><div class="field"><label>Profile picture</label><div class="upl"><div class="avatar-big" id="upPrev" style="width:64px;height:64px;font-size:24px;flex:none"></div><div style="flex:1;min-width:0"><input type="file" id="fileIn" accept="image/png,image/jpeg,image/webp"><div id="upStatus" class="sub" style="margin:6px 0 0;font-size:12px">JPG, PNG or WebP. Max size 8 MB.</div></div></div></div>
   <div class="field"><label>Short bio</label><textarea id="bioIn" rows="3" maxlength="120"></textarea></div>
@@ -202,6 +219,12 @@ import {getStorage,ref as sRef,uploadBytes,getDownloadURL} from "https://www.gst
 const app=initializeApp({apiKey:"AIzaSyCdrgWR4etfuwB19iR3rYCK8F8F5ROLvUI",authDomain:"coded6wo.firebaseapp.com",projectId:"coded6wo",storageBucket:"coded6wo.firebasestorage.app",messagingSenderId:"1064375203058",appId:"1:1064375203058:web:0e03ed4cbc6fa640344c6b",measurementId:"G-TLQB9PDK43"});
 const auth=getAuth(app),storage=getStorage(app),$=id=>document.getElementById(id);
 let user=null,login=false,S={},cur=null;
+$('copyrightYear').textContent=new Date().getFullYear();
+try{$('cookieNotice').hidden=localStorage.getItem('cookieNoticeAccepted')==='yes'}catch(error){console.warn('Could not read cookie notice preference:',error)}
+$('dismissCookieNotice').onclick=()=>{
+  $('cookieNotice').hidden=true;
+  try{localStorage.setItem('cookieNoticeAccepted','yes')}catch(error){console.warn('Could not save cookie notice preference:',error)}
+};
 /* ================= LESSON CONTENT ================= */
 const T={py:'Python',js:'JavaScript',cpp:'C++',cs:'C#',web:'HTML & CSS'};
 const FILE={py:'main.py',js:'script.js',cpp:'main.cpp',cs:'Program.cs',web:'index.html'};
@@ -458,7 +481,7 @@ function renderProfile(){
   Object.keys(T).forEach(t=>{const r=el('div','prow');r.append(el('span',null,T[t]));const bar=el('div','bar'),i=el('i');i.style.width=(doneIn(t)/inTrack(t).length*100)+'%';bar.appendChild(i);r.append(bar,el('small',null,doneIn(t)+'/'+inTrack(t).length));p.appendChild(r)});
 }
 function enter(){
-  $('authCard').style.display='none';load();renderProfile();renderLearn();go('Learn');
+  $('authLoading').style.display='none';$('authCard').style.display='none';load();renderProfile();renderLearn();go('Learn');
 }
 
 /* ================= LESSON PAGE ================= */
@@ -548,7 +571,7 @@ const friendly=e=>({'auth/invalid-credential':'Wrong email or password.','auth/e
 onAuthStateChanged(auth,u=>{
   user=u;
   if(u&&u.displayName)enter();
-  else{['Learn','Profile','Lesson'].forEach(n=>$('pg'+n).style.display='none');$('nav').style.display='none';$('backTop').style.display='none';$('authCard').style.display='block';showStep(u?'user':'auth')}
+  else{$('authLoading').style.display='none';['Learn','Profile','Lesson'].forEach(n=>$('pg'+n).style.display='none');$('nav').style.display='none';$('backTop').style.display='none';$('authCard').style.display='block';showStep(u?'user':'auth')}
 });
 $('switchText').addEventListener('click',e=>{
   if(e.target.id!=='switchBtn')return;login=!login;$('errorMsg').textContent='';
